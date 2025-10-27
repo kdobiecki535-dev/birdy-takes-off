@@ -28,6 +28,7 @@ export const Game = () => {
   const birdRef = useRef<Bird>({ x: 80, y: 250, velocity: 0 });
   const pipesRef = useRef<Pipe[]>([]);
   const groundOffsetRef = useRef(0);
+  const frameCountRef = useRef(0);
 
   const GRAVITY = 0.5;
   const FLAP_STRENGTH = -8;
@@ -41,41 +42,55 @@ export const Game = () => {
     birdRef.current = { x: 80, y: 250, velocity: 0 };
     pipesRef.current = [];
     groundOffsetRef.current = 0;
+    frameCountRef.current = 0;
     setScore(0);
   }, []);
 
   const flap = useCallback(() => {
     if (gameState === "title") {
-      setGameState("playing");
       resetGame();
-    }
-    if (gameState === "playing") {
+      setGameState("playing");
+      // Give initial flap after a small delay
+      setTimeout(() => {
+        birdRef.current.velocity = FLAP_STRENGTH;
+      }, 50);
+    } else if (gameState === "playing") {
       birdRef.current.velocity = FLAP_STRENGTH;
-    }
-    if (gameState === "gameOver") {
-      setGameState("playing");
+    } else if (gameState === "gameOver") {
       resetGame();
+      setGameState("playing");
+      setTimeout(() => {
+        birdRef.current.velocity = FLAP_STRENGTH;
+      }, 50);
     }
   }, [gameState, resetGame]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === "Space" || e.key === " ") {
         e.preventDefault();
         flap();
       }
     };
 
-    const handleClick = () => {
+    const handleClick = (e: MouseEvent) => {
+      e.preventDefault();
       flap();
     };
 
-    window.addEventListener("keydown", handleKeyPress);
-    window.addEventListener("click", handleClick);
+    const handleTouch = (e: TouchEvent) => {
+      e.preventDefault();
+      flap();
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+    document.addEventListener("click", handleClick);
+    document.addEventListener("touchstart", handleTouch);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-      window.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeyPress);
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("touchstart", handleTouch);
     };
   }, [flap]);
 
@@ -197,21 +212,25 @@ export const Game = () => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (gameState === "playing") {
+        frameCountRef.current += 1;
+
         // Update bird
         birdRef.current.velocity += GRAVITY;
         birdRef.current.y += birdRef.current.velocity;
 
-        // Update and spawn pipes
-        if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < canvas.width - 250) {
-          const minTop = 100;
-          const maxTop = canvas.height - 100 - PIPE_GAP - 100;
-          const top = Math.random() * (maxTop - minTop) + minTop;
-          pipesRef.current.push({
-            x: canvas.width,
-            top,
-            bottom: top + PIPE_GAP,
-            passed: false,
-          });
+        // Update and spawn pipes (start after grace period)
+        if (frameCountRef.current > 60) {
+          if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < canvas.width - 250) {
+            const minTop = 100;
+            const maxTop = canvas.height - 100 - PIPE_GAP - 100;
+            const top = Math.random() * (maxTop - minTop) + minTop;
+            pipesRef.current.push({
+              x: canvas.width,
+              top,
+              bottom: top + PIPE_GAP,
+              passed: false,
+            });
+          }
         }
 
         pipesRef.current = pipesRef.current.filter((pipe) => {
@@ -229,8 +248,8 @@ export const Game = () => {
         // Update ground
         groundOffsetRef.current = (groundOffsetRef.current + GROUND_SPEED) % 40;
 
-        // Check collision
-        if (checkCollision()) {
+        // Check collision (after grace period)
+        if (frameCountRef.current > 10 && checkCollision()) {
           setGameState("gameOver");
           if (score > highScore) {
             setHighScore(score);
