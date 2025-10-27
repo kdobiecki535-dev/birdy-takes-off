@@ -85,6 +85,9 @@ export const Game = () => {
   }, [gameState, resetGame]);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.key === " ") {
         e.preventDefault();
@@ -92,24 +95,25 @@ export const Game = () => {
       }
     };
 
-    const handleClick = (e: MouseEvent) => {
+    const handleCanvasClick = (e: MouseEvent) => {
       e.preventDefault();
       flap();
     };
 
-    const handleTouch = (e: TouchEvent) => {
+    const handleCanvasTouch = (e: TouchEvent) => {
       e.preventDefault();
       flap();
     };
 
+    // Only attach click/touch to canvas, not whole document
     document.addEventListener("keydown", handleKeyPress);
-    document.addEventListener("click", handleClick);
-    document.addEventListener("touchstart", handleTouch);
+    canvas.addEventListener("click", handleCanvasClick);
+    canvas.addEventListener("touchstart", handleCanvasTouch);
 
     return () => {
       document.removeEventListener("keydown", handleKeyPress);
-      document.removeEventListener("click", handleClick);
-      document.removeEventListener("touchstart", handleTouch);
+      canvas.removeEventListener("click", handleCanvasClick);
+      canvas.removeEventListener("touchstart", handleCanvasTouch);
     };
   }, [flap]);
 
