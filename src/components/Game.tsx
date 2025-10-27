@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { DifficultySelector } from "@/components/DifficultySelector";
+import { BirdSkinSelector } from "@/components/BirdSkinSelector";
+import { soundEffects } from "@/utils/soundEffects";
+import { 
+  Difficulty, 
+  BirdSkin, 
+  DIFFICULTY_SETTINGS, 
+  BIRD_SKINS 
+} from "@/types/game";
+import { Volume2, VolumeX } from "lucide-react";
 
 interface Bird {
   x: number;
@@ -23,6 +33,9 @@ export const Game = () => {
   const [highScore, setHighScore] = useState(() => {
     return parseInt(localStorage.getItem("flappyHighScore") || "0");
   });
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [birdSkin, setBirdSkin] = useState<BirdSkin>("yellow");
+  const [isMuted, setIsMuted] = useState(false);
 
   const gameLoopRef = useRef<number>();
   const birdRef = useRef<Bird>({ x: 80, y: 250, velocity: 0 });
@@ -30,13 +43,17 @@ export const Game = () => {
   const groundOffsetRef = useRef(0);
   const frameCountRef = useRef(0);
 
-  const GRAVITY = 0.5;
+  const settings = DIFFICULTY_SETTINGS[difficulty];
+  const birdColors = BIRD_SKINS[birdSkin];
+
   const FLAP_STRENGTH = -8;
   const PIPE_WIDTH = 60;
-  const PIPE_GAP = 150;
-  const PIPE_SPEED = 2;
-  const GROUND_SPEED = 2;
   const BIRD_SIZE = 30;
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    soundEffects.setMuted(!isMuted);
+  };
 
   const resetGame = useCallback(() => {
     birdRef.current = { x: 80, y: 250, velocity: 0 };
@@ -50,17 +67,19 @@ export const Game = () => {
     if (gameState === "title") {
       resetGame();
       setGameState("playing");
-      // Give initial flap after a small delay
       setTimeout(() => {
         birdRef.current.velocity = FLAP_STRENGTH;
+        soundEffects.playFlap();
       }, 50);
     } else if (gameState === "playing") {
       birdRef.current.velocity = FLAP_STRENGTH;
+      soundEffects.playFlap();
     } else if (gameState === "gameOver") {
       resetGame();
       setGameState("playing");
       setTimeout(() => {
         birdRef.current.velocity = FLAP_STRENGTH;
+        soundEffects.playFlap();
       }, 50);
     }
   }, [gameState, resetGame]);
@@ -105,7 +124,7 @@ export const Game = () => {
       const bird = birdRef.current;
       
       // Bird body
-      ctx.fillStyle = "#FFD93D";
+      ctx.fillStyle = birdColors.body;
       ctx.fillRect(bird.x, bird.y, BIRD_SIZE, BIRD_SIZE);
       
       // Bird border
@@ -118,7 +137,7 @@ export const Game = () => {
       ctx.fillRect(bird.x + 20, bird.y + 8, 6, 6);
 
       // Beak
-      ctx.fillStyle = "#FF8C42";
+      ctx.fillStyle = birdColors.accent;
       ctx.fillRect(bird.x + BIRD_SIZE, bird.y + 12, 8, 8);
       ctx.strokeRect(bird.x + BIRD_SIZE, bird.y + 12, 8, 8);
     };
@@ -215,30 +234,31 @@ export const Game = () => {
         frameCountRef.current += 1;
 
         // Update bird
-        birdRef.current.velocity += GRAVITY;
+        birdRef.current.velocity += settings.gravity;
         birdRef.current.y += birdRef.current.velocity;
 
         // Update and spawn pipes (start after grace period)
         if (frameCountRef.current > 60) {
-          if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < canvas.width - 250) {
+          if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < canvas.width - settings.pipeSpacing) {
             const minTop = 100;
-            const maxTop = canvas.height - 100 - PIPE_GAP - 100;
+            const maxTop = canvas.height - 100 - settings.pipeGap - 100;
             const top = Math.random() * (maxTop - minTop) + minTop;
             pipesRef.current.push({
               x: canvas.width,
               top,
-              bottom: top + PIPE_GAP,
+              bottom: top + settings.pipeGap,
               passed: false,
             });
           }
         }
 
         pipesRef.current = pipesRef.current.filter((pipe) => {
-          pipe.x -= PIPE_SPEED;
+          pipe.x -= settings.pipeSpeed;
 
           // Update score
           if (!pipe.passed && pipe.x + PIPE_WIDTH < birdRef.current.x) {
             pipe.passed = true;
+            soundEffects.playScore();
             setScore((s) => s + 1);
           }
 
@@ -246,10 +266,12 @@ export const Game = () => {
         });
 
         // Update ground
-        groundOffsetRef.current = (groundOffsetRef.current + GROUND_SPEED) % 40;
+        groundOffsetRef.current = (groundOffsetRef.current + settings.pipeSpeed) % 40;
 
         // Check collision (after grace period)
         if (frameCountRef.current > 10 && checkCollision()) {
+          soundEffects.playHit();
+          soundEffects.playDie();
           setGameState("gameOver");
           if (score > highScore) {
             setHighScore(score);
@@ -277,7 +299,7 @@ export const Game = () => {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [gameState, score, highScore]);
+  }, [gameState, score, highScore, settings, birdColors]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-primary to-primary/80">
@@ -289,11 +311,23 @@ export const Game = () => {
           className="border-4 border-black shadow-2xl"
         />
 
+        {/* Mute button */}
+        <button
+          onClick={toggleMute}
+          className="absolute top-4 right-4 bg-white border-2 border-black p-2 hover:bg-gray-100 transition-colors"
+        >
+          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        </button>
+
         {gameState === "title" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/20">
             <h1 className="pixel-text text-white text-4xl mb-8">
               Flappy Bird
             </h1>
+            
+            <DifficultySelector selected={difficulty} onSelect={setDifficulty} />
+            <BirdSkinSelector selected={birdSkin} onSelect={setBirdSkin} />
+            
             <p className="pixel-text text-white text-sm mb-4">
               Tap or Press Space
             </p>
