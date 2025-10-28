@@ -14,7 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      achievements: {
+        Row: {
+          description: string
+          icon: string
+          id: string
+          name: string
+          requirement: Json
+        }
+        Insert: {
+          description: string
+          icon: string
+          id?: string
+          name: string
+          requirement: Json
+        }
+        Update: {
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          requirement?: Json
+        }
+        Relationships: []
+      }
+      challenge_scores: {
+        Row: {
+          challenge_id: string
+          created_at: string | null
+          id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string | null
+          id?: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string | null
+          id?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_scores_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "daily_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_challenges: {
+        Row: {
+          challenge_date: string
+          created_at: string | null
+          difficulty: string
+          id: string
+          seed: string
+          target_score: number
+        }
+        Insert: {
+          challenge_date: string
+          created_at?: string | null
+          difficulty: string
+          id?: string
+          seed: string
+          target_score: number
+        }
+        Update: {
+          challenge_date?: string
+          created_at?: string | null
+          difficulty?: string
+          id?: string
+          seed?: string
+          target_score?: number
+        }
+        Relationships: []
+      }
+      leaderboard: {
+        Row: {
+          bird_skin: string
+          created_at: string | null
+          difficulty: string
+          id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          bird_skin: string
+          created_at?: string | null
+          difficulty: string
+          id?: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          bird_skin?: string
+          created_at?: string | null
+          difficulty?: string
+          id?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      multiplayer_rooms: {
+        Row: {
+          created_at: string | null
+          difficulty: string
+          ended_at: string | null
+          host_id: string
+          id: string
+          room_code: string
+          seed: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty: string
+          ended_at?: string | null
+          host_id: string
+          id?: string
+          room_code: string
+          seed: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: string
+          ended_at?: string | null
+          host_id?: string
+          id?: string
+          room_code?: string
+          seed?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multiplayer_rooms_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id: string
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      room_participants: {
+        Row: {
+          id: string
+          joined_at: string | null
+          room_id: string
+          score: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          room_id: string
+          score?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          room_id?: string
+          score?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "multiplayer_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
